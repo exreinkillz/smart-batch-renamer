@@ -1,6 +1,14 @@
 import os
 import re
 import argparse
+import logging
+
+logging.basicConfig(
+    filename="rename_log.txt",
+    filemode="a",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 class FileScanner:
     def __init__(self, folder_path, recursive=False):
@@ -63,8 +71,10 @@ class RenamerEngine:
             try:
                 os.rename(old, new)
                 self.success.append((old, new))
+                logging.info(f"Renamed {old} -> {new}")
             except Exception as e:
                 self.failed.append((old, str(e)))
+                logging.error(f"Failed to rename {old} -> {new}: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Smart Batch Renamer")
@@ -82,7 +92,6 @@ def main():
     rename_plan = RenamePlan(files, existing_files, args.base, prefix=args.prefix, suffix=args.suffix)
     rename_plan.generate()
 
-
     if args.dry_run:
         print("Dry-run preview: ")
         for old, new in rename_plan.preview():
@@ -90,16 +99,19 @@ def main():
         confirm = input("Proceed with rename? (y/n): ")
         if confirm.lower() != "y":
             print("Rename cancelled.")
+            logging.info("Dry-run cancelled by user")
             return
 
     engine = RenamerEngine(rename_plan)
     engine.execute()
 
     print("Rename complete.")
+    logging.info("Rename complete.")
     if engine.failed:
         print("Failed renames:")
         for old, err in engine.failed:
             print(f"{old}: {err}")
+            logging.warning(f"Failed rename: {old} -> {err}")
 
 if __name__ == "__main__":
     main()
