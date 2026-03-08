@@ -69,7 +69,13 @@ class RenamerEngine:
     def execute(self):
         for old, new in self.rename_plan.mapping.items():
             try:
+                if os.path.exists(new):
+                    self.failed.append((old, "Target file already exists"))
+                    logging.warning(f"Skipped {old} -> {new} (already exists)")
+                    continue
+
                 os.rename(old, new)
+
                 self.success.append((old, new))
                 logging.info(f"Renamed {old} -> {new}")
             except Exception as e:
@@ -77,6 +83,7 @@ class RenamerEngine:
                 logging.error(f"Failed to rename {old} -> {new}: {e}")
 
 def main():
+    logging.info("Program started")
     parser = argparse.ArgumentParser(description="Smart Batch Renamer")
     parser.add_argument("folder", help="Folder path to rename files in")
     parser.add_argument("base", help="New base name")
@@ -89,8 +96,10 @@ def main():
     scanner = FileScanner(args.folder, recursive=args.recursive)
     files = scanner.get_files()
     existing_files = files.copy()
+    logging.info(f"{len(files)} files found")
     rename_plan = RenamePlan(files, existing_files, args.base, prefix=args.prefix, suffix=args.suffix)
     rename_plan.generate()
+    logging.info("Rename plan generated")
 
     if args.dry_run:
         print("Dry-run preview: ")
@@ -107,11 +116,13 @@ def main():
 
     print("Rename complete.")
     logging.info("Rename complete.")
+    logging.info(f"Successful renames: {len(engine.success)}")
+    logging.info(f"Failed renames: {len(engine.failed)}")
     if engine.failed:
         print("Failed renames:")
         for old, err in engine.failed:
             print(f"{old}: {err}")
-            logging.warning(f"Failed rename: {old} -> {err}")
+            logging.error(f"Failed rename: {old} -> {err}")
 
 if __name__ == "__main__":
     main()
