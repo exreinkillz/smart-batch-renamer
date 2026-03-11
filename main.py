@@ -2,6 +2,7 @@ import os
 import re
 import argparse
 import logging
+from pathlib import Path
 
 logging.basicConfig(
     filename="rename_log.txt",
@@ -50,9 +51,9 @@ class RenamePlan:
         for old in self.files:
             while counter in used_indices:
                 counter += 1
-            ext = os.path.splitext(old)[1]
+            ext = Path(old).suffix
             new_name = f"{self.prefix}{self.base_name}_{counter}{self.suffix}{ext}"
-            new_path = os.path.join(os.path.dirname(old), new_name)
+            new_path = Path(old).parent / new_name
             self.mapping[old] = new_path
             used_indices.add(counter)
             counter += 1
@@ -74,7 +75,9 @@ class RenamerEngine:
                     logging.warning(f"Skipped {old} -> {new} (already exists)")
                     continue
 
-                os.rename(old, new)
+                temp_new = str(new) + ".tmp"
+                os.rename(old, temp_new)
+                os.replace(temp_new, new)
 
                 self.success.append((old, new))
                 logging.info(f"Renamed {old} -> {new}")
