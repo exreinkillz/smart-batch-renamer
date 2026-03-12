@@ -43,7 +43,7 @@ class RenamePlan:
         used_indices = set()
         pattern = re.compile(rf"{re.escape(self.base_name)}_(\d+)$")
         for fname in self.existing_files:
-            match = pattern.match(os.path.splitext(os.path.basename(fname))[0])
+            match = pattern.match(Path(fname).stem)
             if match:
                 used_indices.add(int(match.group(1)))
 
@@ -70,14 +70,12 @@ class RenamerEngine:
     def execute(self):
         for old, new in self.rename_plan.mapping.items():
             try:
-                if os.path.exists(new):
+                if Path(new).exists():
                     self.failed.append((old, "Target file already exists"))
                     logging.warning(f"Skipped {old} -> {new} (already exists)")
                     continue
 
-                temp_new = str(new) + ".tmp"
-                os.rename(old, temp_new)
-                os.replace(temp_new, new)
+                os.replace(old, new)
 
                 self.success.append((old, new))
                 logging.info(f"Renamed {old} -> {new}")
